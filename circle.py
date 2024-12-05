@@ -11,7 +11,7 @@ from flask import Flask, jsonify
 # Flask server setup
 app = Flask(__name__)
 
-@app.route("/", methods=["GET"])
+@app.route("/live", methods=["GET"])
 def home():
     return jsonify({"message": "Server is running", "status": 200})
 
