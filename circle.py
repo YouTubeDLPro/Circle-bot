@@ -6,6 +6,14 @@ import random
 from datetime import datetime
 import threading
 import signal
+from flask import Flask, jsonify
+
+# Flask server setup
+app = Flask(__name__)
+
+@app.route("/", methods=["GET"])
+def home():
+    return jsonify({"message": "Server is running", "status": 200})
 
 # Setup logging for debugging and error tracking
 logger = logging.getLogger()
@@ -61,7 +69,6 @@ def build_headers(authorization):
 BLOCK_ID = 3852
 stop_threads = False
 
-# Function to build the URL for claiming an ad
 def build_ad_url(tg_id, tg_platform, platform, language, chat_type, chat_instance, top_domain):
     return f"https://api.adsgram.ai/adv?blockId={BLOCK_ID}&tg_id={tg_id}&tg_platform={tg_platform}&platform={platform}&language={language}&chat_type={chat_type}&chat_instance={chat_instance}&top_domain={top_domain}"
 
@@ -78,7 +85,7 @@ def read_multiple_accounts(filename="data.txt"):
                         account_data = {}
                 elif "=" in line:
                     key, value = line.split("=", 1)
-                    clean_key = key.rstrip("0123456789")  # Remove numerical suffix
+                    clean_key = key.rstrip("0123456789")
                     account_data[clean_key.strip()] = value.strip()
 
             if account_data:
@@ -99,7 +106,6 @@ def read_multiple_accounts(filename="data.txt"):
         logger.error(f"{RED}Error reading accounts from file: {e}{RESET}")
         return None
 
-# Function to send a request for claiming ads
 def claim_ad(account, headers):
     ad_url = build_ad_url(
         account['tg_id'], account['tg_platform'], 'Win32',
@@ -135,7 +141,6 @@ def claim_ad(account, headers):
         logger.error(f"Error claiming ad: {e}")
         return False
 
-# Function to watch ads for a single account
 def watch_ads_for_account(account):
     global stop_threads
     headers = build_headers(account.get("authorization", ""))
@@ -156,7 +161,6 @@ def watch_ads_for_account(account):
     except Exception as e:
         logger.error(f"Error in account {account['tg_id']}: {e}")
 
-# Function to handle collective waiting for all accounts
 def wait_between_ads(wait_time):
     global stop_threads
     logger.info(f"⏳ Waiting {wait_time} seconds before the next round...")
@@ -168,7 +172,6 @@ def wait_between_ads(wait_time):
         wait_time -= 1
     print()
 
-# Function to start watching ads for all accounts
 def watch_ads():
     global stop_threads
     accounts = read_multiple_accounts("data.txt")
@@ -192,14 +195,17 @@ def watch_ads():
             wait_time = random.randint(150, 180)
             wait_between_ads(wait_time)
 
-# Graceful shutdown handler
 def shutdown_handler(signum, frame):
     global stop_threads
     logger.info(f"{RED}Shutting down...{RESET}")
     stop_threads = True
 
-# Set up signal handler for Ctrl+C
 signal.signal(signal.SIGINT, shutdown_handler)
+
+# Run Flask server in a separate thread
+flask_thread = threading.Thread(target=app.run, kwargs={"host": "0.0.0.0", "port": 5000})
+flask_thread.daemon = True
+flask_thread.start()
 
 # Start the ad-watching process
 watch_ads()
