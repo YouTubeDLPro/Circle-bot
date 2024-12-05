@@ -1,20 +1,20 @@
-tg_id=
-tg_platform=
+tg_id=YOUR_TG_ID
+tg_platform=YOUR_TG_PLATFORM
 language=en
 chat_type=sender
-chat_instance=
+chat_instance=YOUR_CHAT_INSTANCE
 top_domain=bot.toncircle.org
 
-tg_id1=
-tg_platform1=
+tg_id1=YOUR_TG_ID1
+tg_platform1=YOUR_TG_PLATFORM1
 language1=en
 chat_type1=sender
-chat_instance1=
+chat_instance1=YOUR_CHAT_INSTANCE1
 top_domain1=bot.toncircle.org
 
-tg_id2=
-tg_platform2=
+tg_id2=YOUR_TG_ID2
+tg_platform2=YOUR_TG_PLATFORM2
 language2=en
 chat_type2=sender
-chat_instance2=
+chat_instance2=YOUR_CHAT_INSTANCE2
 top_domain2=bot.toncircle.org
