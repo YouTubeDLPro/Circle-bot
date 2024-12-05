@@ -1,20 +1,20 @@
-tg_id=6024349418
-tg_platform=android
+tg_id=
+tg_platform=
 language=en
 chat_type=sender
-chat_instance=5678353264986675436
+chat_instance=
 top_domain=bot.toncircle.org
 
-tg_id1=6361277950
-tg_platform1=android
+tg_id1=
+tg_platform1=
 language1=en
 chat_type1=sender
-chat_instance1=-7433601623771465818
+chat_instance1=
 top_domain1=bot.toncircle.org
 
-tg_id2=7483011200
-tg_platform2=android
+tg_id2=
+tg_platform2=
 language2=en
 chat_type2=sender
-chat_instance2=8017430563555345518
+chat_instance2=
 top_domain2=bot.toncircle.org
