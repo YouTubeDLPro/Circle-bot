@@ -203,7 +203,7 @@ def shutdown_handler(signum, frame):
 signal.signal(signal.SIGINT, shutdown_handler)
 
 # Run Flask server in a separate thread
-flask_thread = threading.Thread(target=app.run, kwargs={"host": "0.0.0.0", "port": 5000})
+flask_thread = threading.Thread(target=app.run, kwargs={"host": "0.0.0.0", "port": 3000})
 flask_thread.daemon = True
 flask_thread.start()
 
