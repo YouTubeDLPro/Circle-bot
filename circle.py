@@ -98,16 +98,16 @@ def build_ad_url(tg_id, tg_platform, platform, language, chat_type, chat_instanc
 def read_multiple_accounts(filename="data.txt"):
     """
     Reads and parses account details from the specified file.
-    Excludes accounts with missing values or placeholder values.
+    Filters and includes only accounts with numerical suffixes in their variable names.
 
     Args:
         filename (str): Path to the file containing account details.
 
     Returns:
-        list: A list of valid accounts.
+        list: A list of valid accounts with numerical suffixes in variable names.
     """
     accounts = []
-    placeholder_values = ["YOUR_TG_ID1", "YOUR_TG_PLATFORM1", "YOUR_CHAT_INSTANCE1", "YOUR_TG_ID2", "YOUR_TG_PLATFORM2", "YOUR_CHAT_INSTANCE2"]
+    placeholder_values = ["YOUR_TG_ID", "YOUR_TG_PLATFORM", "YOUR_CHAT_INSTANCE"]
 
     try:
         with open(filename, "r") as file:
@@ -122,8 +122,10 @@ def read_multiple_accounts(filename="data.txt"):
                         account_data = {}
                 elif "=" in line:
                     key, value = line.split("=", 1)
-                    clean_key = key.rstrip("0123456789")
-                    account_data[clean_key.strip()] = value.strip()
+                    # Extract the numerical suffix, if present
+                    if any(char.isdigit() for char in key):
+                        clean_key = key.rstrip("0123456789")
+                        account_data[clean_key.strip()] = value.strip()
 
             # Add the last account if it's valid
             if account_data and all(account_data.values()) and not any(value in placeholder_values for value in account_data.values()):
