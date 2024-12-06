@@ -1,45 +1,55 @@
-# Circle-bot
+# Circle Bot for Circle Airdrop
 
-## Overview
-This project, **Circle-bot**, automates the process of watching ads and claiming rewards in a Telegram airdrop project called "Circle." The bot processes multiple accounts, makes HTTP requests to the Circle platform, and logs results efficiently. Additionally, it includes a Flask server to provide a basic health check endpoint.
+This repository contains an automation script for watching ads as part of an airdrop project on Telegram called **Circle**. The script processes accounts stored in a file and automates the ad-watching process to earn rewards.
 
-## Repository Structure
-```
-README.md          - Documentation for the project.
-app.log            - Log file for recording application events and errors.
-circle.py          - Main script for automating ad watching and claiming rewards.
-data.txt           - Input file containing account details.
-requirements.txt   - Python dependencies required to run the script.
-```
+---
 
 ## Features
-- **Ad Reward Automation**: Automatically claims ad rewards for multiple accounts registered in the Circle project.
-- **Logging**: Logs important events and errors to both the console and a log file.
-- **Multithreading**: Simultaneously processes multiple accounts for faster execution.
-- **Flask Server**: Provides a `/live` endpoint to check server status and confirm the bot is running.
 
-## Installation
+- **Ad Watching Automation**: Automatically interacts with ads to claim rewards for multiple accounts.  
+- **Account Management**: Reads account details from a structured file (`data.txt`).  
+- **Logging**: Tracks activity and errors in real-time via console and log files.  
+- **Threaded Execution**: Processes multiple accounts concurrently to improve efficiency.  
+- **Graceful Shutdown**: Allows for interruption handling using signals.  
 
-### Prerequisites
-- Python 3.12
-- pip (Python package installer)
+---
 
-### Steps
-1. Clone this repository:
+## File Structure
+
+- `circle.py` - The main script that handles the automation.  
+- `data.txt` - A configuration file containing account details.  
+- `app.log` - A log file to track script execution and errors.  
+- `requirements.txt` - Contains Python dependencies for the project.  
+- `README.md` - Documentation for the project.  
+- `License` - License file for the project.  
+
+---
+
+## Pre-requisites
+
+- Python 3.12  
+- `pip` (Python package manager)  
+
+---
+
+## Setup
+
+1. Clone the repository:  
+
    ```bash
    git clone https://github.com/YouTubeDLPro/Circle-bot.git
+   ```
+   Change the directory to the repo folder:
+   ```bash
    cd Circle-bot
    ```
-
+   
 2. Install dependencies:
    ```bash
    pip install -r requirements.txt
    ```
 
-3. Prepare the `data.txt` file with your account details (see **Input File Format**).
-
-## Input File Format
-`data.txt` should contain account details in the following format:
+3. Prepare the data.txt file with your account details. The file should follow this format:
 
 ```
 tg_id=YOUR_TG_ID
@@ -63,54 +73,90 @@ chat_type2=sender
 chat_instance2=YOUR_CHAT_INSTANCE2
 top_domain2=bot.toncircle.org
 ```
+Note: You can add as many accounts as you want, but the details should strictly follow this format.
 
-- If you want to add more accounts, follow the above format.
-- If you only want to use one account, delete all other account configurations and leave only the main one.
+---
 
-## Usage
+## How to Use
 
-### Running the Script
-Start the script by running:
-```bash
+1. Run the script:
+
 python circle.py
-```
 
-### Flask Server
-The script starts a Flask server to make the bot hostable on a hosting service provider. The server runs on port `1700` by default. If port `1700` is already in use, you will need to adjust the port number manually in the code to an available one. Note that ports `3000`, `9000`, and `7000` are also in use and cannot be used for this script. Ensure that the chosen port is not occupied by other services.
 
-You can check the server status by visiting:
-```
-http://localhost:<port_number>/live
-```
+2. The script will:
 
-Response:
-```json
-{
-  "message": "Server is running",
-  "status": 200
-}
-```
+Load account data from data.txt.
 
-## Logging
-Logs are stored in `app.log` and provide details about:
-- Errors
-- Ad rewards claimed
-- Missing account parameters
+Start automated ad-watching for each account.
 
-## Stopping the Script
-You can stop the script gracefully by pressing `Ctrl+C`. This triggers the shutdown handler and stops all active threads.
+Log progress and errors in app.log.
 
-## Notes
-- Ensure all required keys (e.g., `tg_id`, `tg_platform`, etc.) are included in each account in `data.txt`. Missing keys will result in errors.
-- Leave the `BLOCK_ID` as it is.
-- Adjust the Flask server port in the code if `1700` is already in use, as ports `3000`, `9000`, `7000`, are already occupied.
 
-## Dependencies
-See `requirements.txt` for a list of Python libraries required to run the script. Install them using:
+
+3. Use CTRL+C to gracefully shut down the script.
+
+
+
+
+---
+
+## Logs
+
+All activities, errors, and debugging information are logged to: app.log
+
+Console Output: Real-time updates.
+
+app.log: Persistent log file.
+
+
+
+---
+
+## Troubleshooting
+
+File Not Found: Ensure data.txt is in the same directory as the script or update the file path in the script.
+
+Incomplete Data: Double-check data.txt for missing or malformed entries.
+
+Dependencies: Use pip install -r requirements.txt to ensure all dependencies are installed.
+
+
+
+---
+
+## Contributing
+
+Contributions are welcome! Feel free to open issues or submit pull requests to improve the project.
+
+---
+## Donation 
+
+If you find this script helpful, then you can donate me via TON, TRON and TetherUSD(TRC20). 
+
+Address:
+TON :-
 ```bash
-pip install -r requirements.txt
+UQBzIaiaq09t1tkhvQqghENXvs-qXKvM1R9A5wLm7_nfUTz9
 ```
+Tron and TetherUSD(TRC20) :-
+```bash
+TM84PPmuDEu1UfC5JrZ16XaX4s5Dqjz3Fi
+```
+---
 
 ## License
-This project is licensed under the MIT License. See `LICENSE` for more details.
 
+This project is licensed under the MIT License. See the License file for details.
+
+
+---
+
+## Disclaimer
+
+Use this script at your own risk. Using automated scripts can lead to account bans.
+
+
+---
+
+## Happy Farming!
