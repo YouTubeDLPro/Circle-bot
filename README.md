@@ -75,6 +75,8 @@ top_domain2=bot.toncircle.org
 ```
 Note: You can add as many accounts as you want, but the details should strictly follow this format.
 
+And there are place for giving 20 telegram accounts details.
+
 ---
 
 ## How to Use
