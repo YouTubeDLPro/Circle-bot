@@ -62,6 +62,7 @@ def display_banner(filename, account_count):
 
 {RESET}    File: {YELLOW}{filename}{RESET}
     Accounts Loaded: {GREEN}{account_count}{RESET}
+    Always use 'git pull' to update the script to the latest version..!
     """
     print(banner)
 
