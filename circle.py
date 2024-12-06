@@ -1,3 +1,4 @@
+import os  # Added for extracting file name from path
 import requests
 import time
 import logging
@@ -6,14 +7,13 @@ import random
 from datetime import datetime
 import threading
 import signal
-from flask import Flask, jsonify
+import os
 
-# Flask server setup
-app = Flask(__name__)
+# Clear terminal before starting
+os.system('cls' if os.name == 'nt' else 'clear')
 
-@app.route("/live", methods=["GET"])
-def home():
-    return jsonify({"message": "Server is running", "status": 200})
+# Global flag to stop threads
+stop_threads = False
 
 # Setup logging for debugging and error tracking
 logger = logging.getLogger()
@@ -43,6 +43,28 @@ RED = "\033[91m"
 CYAN = "\033[96m"
 RESET = "\033[0m"
 
+def display_banner(filename, account_count):
+    """
+    Display the ASCII banner with file details.
+
+    Args:
+        filename (str): Name of the file used for retrieving accounts.
+        account_count (int): Number of accounts in the file.
+    """
+    banner = f"""
+{CYAN}
+ ██████╗██╗██████╗  ██████╗██╗     ███████╗    ██████╗  ██████╗ ████████╗
+██╔════╝██║██╔══██╗██╔════╝██║     ██╔════╝    ██╔══██╗██╔═══██╗╚══██╔══╝
+██║     ██║██████╔╝██║     ██║     █████╗      ██████╔╝██║   ██║   ██║   
+██║     ██║██╔══██╗██║     ██║     ██╔══╝      ██╔══██╗██║   ██║   ██║   
+╚██████╗██║██║  ██║╚██████╗███████╗███████╗    ██████╔╝╚██████╔╝   ██║   
+ ╚═════╝╚═╝╚═╝  ╚═╝ ╚═════╝╚══════╝╚══════╝    ╚═════╝  ╚═════╝    ╚═╝   
+
+{RESET}    File: {YELLOW}{filename}{RESET}
+    Accounts Loaded: {GREEN}{account_count}{RESET}
+    """
+    print(banner)
+
 # Headers for the requests
 def build_headers(authorization):
     """
@@ -71,7 +93,7 @@ stop_threads = False
 
 def build_ad_url(tg_id, tg_platform, platform, language, chat_type, chat_instance, top_domain):
     return f"https://api.adsgram.ai/adv?blockId={BLOCK_ID}&tg_id={tg_id}&tg_platform={tg_platform}&platform={platform}&language={language}&chat_type={chat_type}&chat_instance={chat_instance}&top_domain={top_domain}"
-
+    
 def read_multiple_accounts(filename="data.txt"):
     accounts = []
     try:
@@ -81,14 +103,15 @@ def read_multiple_accounts(filename="data.txt"):
                 line = line.strip()
                 if not line:
                     if account_data:
-                        accounts.append(account_data)
+                        if all(account_data.values()):  # Ensure account has no blank values
+                            accounts.append(account_data)
                         account_data = {}
                 elif "=" in line:
                     key, value = line.split("=", 1)
                     clean_key = key.rstrip("0123456789")
                     account_data[clean_key.strip()] = value.strip()
 
-            if account_data:
+            if account_data and all(account_data.values()):  # Add last account if not blank
                 accounts.append(account_data)
 
         required_keys = ['tg_id', 'tg_platform', 'language', 'chat_type', 'chat_instance', 'top_domain']
@@ -96,14 +119,21 @@ def read_multiple_accounts(filename="data.txt"):
             missing_keys = [key for key in required_keys if key not in account]
             if missing_keys:
                 logger.error(f"Missing keys in account: {', '.join(missing_keys)}")
-                return None
+                continue
 
+        # Extract file name from the full path
+        file_name_only = os.path.basename(filename)
+        display_banner(file_name_only, len(accounts))
         return accounts
     except FileNotFoundError:
         logger.error(f"{RED}File {filename} not found.{RESET}")
+        file_name_only = os.path.basename(filename)  # Extract file name
+        display_banner(file_name_only, 0)  # Show banner even if the file is missing
         return None
     except Exception as e:
         logger.error(f"{RED}Error reading accounts from file: {e}{RESET}")
+        file_name_only = os.path.basename(filename)  # Extract file name
+        display_banner(file_name_only, 0)  # Show banner even if there's an error
         return None
 
 def claim_ad(account, headers):
@@ -117,7 +147,6 @@ def claim_ad(account, headers):
 
         if response.status_code == 200:
             ad_data = response.json()
-            timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
             tracking_urls = [tracking.get("value") for tracking in ad_data.get("banner", {}).get("trackings", [])]
             if not tracking_urls:
                 logger.error("No Claim URLs found.")
@@ -201,11 +230,6 @@ def shutdown_handler(signum, frame):
     stop_threads = True
 
 signal.signal(signal.SIGINT, shutdown_handler)
-
-# Run Flask server in a separate thread
-flask_thread = threading.Thread(target=app.run, kwargs={"host": "0.0.0.0", "port": 1700})
-flask_thread.daemon = True
-flask_thread.start()
 
 # Start the ad-watching process
 watch_ads()
