@@ -95,6 +95,8 @@ stop_threads = False
 def build_ad_url(tg_id, tg_platform, platform, language, chat_type, chat_instance, top_domain):
     return f"https://api.adsgram.ai/adv?blockId={BLOCK_ID}&tg_id={tg_id}&tg_platform={tg_platform}&platform={platform}&language={language}&chat_type={chat_type}&chat_instance={chat_instance}&top_domain={top_domain}"
     
+import os
+
 def read_multiple_accounts(filename="data.txt"):
     """
     Reads and parses account details from the specified file.
@@ -126,8 +128,13 @@ def read_multiple_accounts(filename="data.txt"):
                     key = key.strip()
                     value = value.strip()
 
-                    # Add the key-value pair to the account data
-                    account_data[key] = value
+                    # Normalize keys by removing numeric suffixes
+                    base_key = key
+                    if base_key[-1].isdigit():
+                        base_key = ''.join([ch for ch in base_key if not ch.isdigit()])
+
+                    # Add the normalized key-value pair to the account data
+                    account_data[base_key] = value
 
             # Add the last account if it's valid
             if account_data:
@@ -149,6 +156,7 @@ def read_multiple_accounts(filename="data.txt"):
         file_name_only = os.path.basename(filename)
         display_banner(file_name_only, 0)  # Show banner even if there's an error
         return []
+        
 def claim_ad(account, headers):
     ad_url = build_ad_url(
         account['tg_id'], account['tg_platform'], 'Win32',
