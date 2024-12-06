@@ -96,15 +96,28 @@ def build_ad_url(tg_id, tg_platform, platform, language, chat_type, chat_instanc
     return f"https://api.adsgram.ai/adv?blockId={BLOCK_ID}&tg_id={tg_id}&tg_platform={tg_platform}&platform={platform}&language={language}&chat_type={chat_type}&chat_instance={chat_instance}&top_domain={top_domain}"
     
 def read_multiple_accounts(filename="data.txt"):
+    """
+    Reads and parses account details from the specified file.
+    Excludes accounts with missing values or placeholder values.
+
+    Args:
+        filename (str): Path to the file containing account details.
+
+    Returns:
+        list: A list of valid accounts.
+    """
     accounts = []
+    placeholder_values = ["YOUR_TG_ID1", "YOUR_TG_PLATFORM1", "YOUR_CHAT_INSTANCE1", "YOUR_TG_ID2", "YOUR_TG_PLATFORM2", "YOUR_CHAT_INSTANCE2"]
+
     try:
         with open(filename, "r") as file:
             account_data = {}
             for line in file:
                 line = line.strip()
                 if not line:
+                    # End of an account entry
                     if account_data:
-                        if all(account_data.values()):  # Ensure account has no blank values
+                        if all(account_data.values()) and not any(value in placeholder_values for value in account_data.values()):
                             accounts.append(account_data)
                         account_data = {}
                 elif "=" in line:
@@ -112,28 +125,32 @@ def read_multiple_accounts(filename="data.txt"):
                     clean_key = key.rstrip("0123456789")
                     account_data[clean_key.strip()] = value.strip()
 
-            if account_data and all(account_data.values()):  # Add last account if not blank
+            # Add the last account if it's valid
+            if account_data and all(account_data.values()) and not any(value in placeholder_values for value in account_data.values()):
                 accounts.append(account_data)
 
         required_keys = ['tg_id', 'tg_platform', 'language', 'chat_type', 'chat_instance', 'top_domain']
+        valid_accounts = []
         for account in accounts:
             missing_keys = [key for key in required_keys if key not in account]
             if missing_keys:
                 logger.error(f"Missing keys in account: {', '.join(missing_keys)}")
                 continue
+            valid_accounts.append(account)
 
-        # Extract file name from the full path
+        # Display banner with valid account count
         file_name_only = os.path.basename(filename)
-        display_banner(file_name_only, len(accounts))
-        return accounts
+        display_banner(file_name_only, len(valid_accounts))
+        return valid_accounts
+
     except FileNotFoundError:
         logger.error(f"{RED}File {filename} not found.{RESET}")
-        file_name_only = os.path.basename(filename)  # Extract file name
+        file_name_only = os.path.basename(filename)
         display_banner(file_name_only, 0)  # Show banner even if the file is missing
         return None
     except Exception as e:
         logger.error(f"{RED}Error reading accounts from file: {e}{RESET}")
-        file_name_only = os.path.basename(filename)  # Extract file name
+        file_name_only = os.path.basename(filename)
         display_banner(file_name_only, 0)  # Show banner even if there's an error
         return None
 
