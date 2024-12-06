@@ -98,16 +98,16 @@ def build_ad_url(tg_id, tg_platform, platform, language, chat_type, chat_instanc
 def read_multiple_accounts(filename="data.txt"):
     """
     Reads and parses account details from the specified file.
-    Filters accounts to include only those with valid numerical values in keys.
+    Filters accounts to include only those with valid entries for required keys.
 
     Args:
         filename (str): Path to the file containing account details.
 
     Returns:
-        list: A list of valid accounts with numerical keys and non-placeholder values.
+        list: A list of valid accounts with non-placeholder values.
     """
     accounts = []
-    placeholder_values = ["YOUR_TG_ID", "YOUR_TG_PLATFORM", "YOUR_CHAT_INSTANCE"]
+    required_keys = ["tg_id", "tg_platform", "language", "chat_type", "chat_instance", "top_domain"]
 
     try:
         with open(filename, "r") as file:
@@ -117,38 +117,27 @@ def read_multiple_accounts(filename="data.txt"):
                 if not line:
                     # End of an account entry
                     if account_data:
-                        # Filter out accounts with placeholders or missing values
-                        if (
-                            all(account_data.values()) and
-                            not any(value in placeholder_values for value in account_data.values())
-                        ):
+                        # Check if all required keys are present
+                        if all(key in account_data for key in required_keys) and "YOUR_" not in str(account_data):
                             accounts.append(account_data)
                         account_data = {}
                 elif "=" in line:
                     key, value = line.split("=", 1)
-                    # Check if the key ends with a digit and has valid data
-                    if key.rstrip("0123456789").isalpha() and key[-1].isdigit():
-                        account_data[key.strip()] = value.strip()
+                    key = key.strip()
+                    value = value.strip()
+
+                    # Add the key-value pair to the account data
+                    account_data[key] = value
 
             # Add the last account if it's valid
-            if account_data and all(account_data.values()) and not any(
-                value in placeholder_values for value in account_data.values()
-            ):
-                accounts.append(account_data)
-
-        # Filter valid accounts based on required keys
-        valid_accounts = []
-        for account in accounts:
-            # Ensure all required keys are present
-            if all(key in account for key in [
-                "tg_id", "tg_platform", "language", "chat_type", "chat_instance", "top_domain"
-            ]):
-                valid_accounts.append(account)
+            if account_data:
+                if all(key in account_data for key in required_keys) and "YOUR_" not in str(account_data):
+                    accounts.append(account_data)
 
         # Display banner with valid account count
         file_name_only = os.path.basename(filename)
-        display_banner(file_name_only, len(valid_accounts))
-        return valid_accounts
+        display_banner(file_name_only, len(accounts))
+        return accounts
 
     except FileNotFoundError:
         logger.error(f"{RED}File {filename} not found.{RESET}")
