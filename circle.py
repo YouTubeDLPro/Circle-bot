@@ -227,7 +227,8 @@ def watch_ads():
 
 def shutdown_handler(signum, frame):
     global stop_threads
-    logger.info(f"{RED}Shutting down...{RESET}")
+    print()
+    logger.info(f"{RED}Thank you for using me. Goodbye...{RESET}")
     stop_threads = True
 
 signal.signal(signal.SIGINT, shutdown_handler)
