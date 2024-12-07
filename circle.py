@@ -1,40 +1,21 @@
-import os  # Added for extracting file name from path
-import requests
-import time
-import logging
+import os
 import sys
+import time
 import random
-from datetime import datetime
+import logging
 import threading
 import signal
-import os
+from concurrent.futures import ThreadPoolExecutor
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
+import requests
 
-# Clear terminal before starting
-os.system('cls' if os.name == 'nt' else 'clear')
-
-# Global flag to stop threads
-stop_threads = False
-
-# Setup logging for debugging and error tracking
-logger = logging.getLogger()
-logger.setLevel(logging.INFO)
-
-# Create handlers
-console_handler = logging.StreamHandler(sys.stdout)
-file_handler = logging.FileHandler('app.log', encoding='utf-8')
-
-# Set log levels
-console_handler.setLevel(logging.INFO)
-file_handler.setLevel(logging.INFO)
-
-# Formatter for logs
-formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
-console_handler.setFormatter(formatter)
-file_handler.setFormatter(formatter)
-
-# Add handlers to logger
-logger.addHandler(console_handler)
-logger.addHandler(file_handler)
+# Constants
+BLOCK_ID = 3852
+DATA_FILE = "data.txt"
+MAX_WORKERS = 5
+RETRY_LIMIT = 5
+WAIT_TIME_RANGE = (150, 180)
 
 # ANSI escape codes for color formatting
 GREEN = "\033[92m"
@@ -43,13 +24,32 @@ RED = "\033[91m"
 CYAN = "\033[96m"
 RESET = "\033[0m"
 
+# Logging Setup
+logger = logging.getLogger("AdWatcher")
+logger.setLevel(logging.INFO)
+
+console_handler = logging.StreamHandler(sys.stdout)
+file_handler = logging.FileHandler('app.log', encoding='utf-8')
+
+formatter = logging.Formatter('%(asctime)s - %(message)s')
+console_handler.setFormatter(formatter)
+file_handler.setFormatter(formatter)
+
+logger.addHandler(console_handler)
+logger.addHandler(file_handler)
+
+# Thread-safe stop signal
+stop_event = threading.Event()
+
+# Initialize a retryable requests session
+session = requests.Session()
+retries = Retry(total=RETRY_LIMIT, backoff_factor=1, status_forcelist=[500, 502, 503, 504])
+session.mount("https://", HTTPAdapter(max_retries=retries))
+
+
 def display_banner(filename, account_count):
     """
-    Display the ASCII banner with file details.
-
-    Args:
-        filename (str): Name of the file used for retrieving accounts.
-        account_count (int): Number of accounts in the file.
+    Display the ASCII banner with details.
     """
     banner = f"""
 {CYAN}
@@ -58,24 +58,22 @@ def display_banner(filename, account_count):
 ██║     ██║██████╔╝██║     ██║     █████╗      ██████╔╝██║   ██║   ██║   
 ██║     ██║██╔══██╗██║     ██║     ██╔══╝      ██╔══██╗██║   ██║   ██║   
 ╚██████╗██║██║  ██║╚██████╗███████╗███████╗    ██████╔╝╚██████╔╝   ██║   
- ╚═════╝╚═╝╚═╝  ╚═╝ ╚═════╝╚══════╝╚══════╝    ╚═════╝  ╚═════╝    ╚═╝   
+ ╚═════╝╚═╝╚═╝  ╚═╝ ╚═════╝╚══════╝╚══════╝    ╚═════╝  ╚═════╝    ╚═╝  
 
-{RESET}    File: {YELLOW}{filename}{RESET}
-    Accounts Loaded: {GREEN}{account_count}{RESET}
-    Always use 'git pull' to update the script to the latest version..!
+{RESET}📁 File: {YELLOW}{filename}{RESET}
+📊 Accounts Loaded: {GREEN}{account_count}{RESET}
+
+{YELLOW}👋 Hey there! I’m your friendly ad-watching assistant. Let’s get started! 🚀{RESET}
+🔔 Keep me updated with 'git pull' to unlock the latest features!
+
+============================================================================================
     """
     print(banner)
 
-# Headers for the requests
+
 def build_headers(authorization):
     """
     Build headers for making HTTP requests.
-
-    Args:
-        authorization (str): The authorization token for the request.
-
-    Returns:
-        dict: A dictionary containing headers required for the HTTP request.
     """
     return {
         'accept': '*/*',
@@ -89,13 +87,14 @@ def build_headers(authorization):
         'x-requested-with': 'org.telegram.messenger',
     }
 
-BLOCK_ID = 3852
-stop_threads = False
 
-def build_ad_url(tg_id, tg_platform, platform, language, chat_type, chat_instance, top_domain):
-    return f"https://api.adsgram.ai/adv?blockId={BLOCK_ID}&tg_id={tg_id}&tg_platform={tg_platform}&platform={platform}&language={language}&chat_type={chat_type}&chat_instance={chat_instance}&top_domain={top_domain}"
-    
-import os
+def build_ad_url(account):
+    """
+    Construct the ad URL for a given account.
+    """
+    return f"https://api.adsgram.ai/adv?blockId={BLOCK_ID}&tg_id={account['tg_id']}&tg_platform={account['tg_platform']}&platform=Win32&language={account['language']}&chat_type={account['chat_type']}&chat_instance={account['chat_instance']}&top_domain={account['top_domain']}"
+
+
 
 def read_multiple_accounts(filename="data.txt"):
     """
@@ -156,102 +155,100 @@ def read_multiple_accounts(filename="data.txt"):
         file_name_only = os.path.basename(filename)
         display_banner(file_name_only, 0)  # Show banner even if there's an error
         return []
-        
-def claim_ad(account, headers):
-    ad_url = build_ad_url(
-        account['tg_id'], account['tg_platform'], 'Win32',
-        account['language'], account['chat_type'],
-        account['chat_instance'], account['top_domain']
-    )
+
+
+def claim_ad(account):
+    """
+    Claims ad rewards for the given account.
+    """
+    headers = build_headers(account.get("authorization", ""))
+    ad_url = build_ad_url(account)
+
     try:
-        response = requests.get(ad_url, headers=headers)
+        response = session.get(ad_url, headers=headers)
 
         if response.status_code == 200:
             ad_data = response.json()
-            tracking_urls = [tracking.get("value") for tracking in ad_data.get("banner", {}).get("trackings", [])]
+            tracking_urls = [t.get("value") for t in ad_data.get("banner", {}).get("trackings", [])]
+
             if not tracking_urls:
-                logger.error("No Claim URLs found.")
+                logger.error(f"No claim URLs found for account {account['tg_id']}.")
                 return False
 
             for tracking_url in tracking_urls:
-                try:
-                    tracking_response = requests.get(tracking_url)
-                    if tracking_response.status_code != 200:
-                        logger.error(f"Failed tracking request: {tracking_url}")
-                        return False
-                except Exception as e:
-                    logger.error(f"Error during tracking request: {e}")
+                tracking_response = session.get(tracking_url)
+                if tracking_response.status_code != 200:
+                    logger.error(f"Tracking failed for URL: {tracking_url}. Trying another one.")
                     return False
 
             return True
         else:
-            logger.error(f"Failed to claim ad: {ad_url}, Response: {response.text}")
+            logger.error(f"Failed to claim ad for {account['tg_id']} (Error: {response.text}).")
             return False
+
     except Exception as e:
-        logger.error(f"Error claiming ad: {e}")
+        logger.error(f"{RED}Error while claiming ads for {account['tg_id']}: {e}.{RESET}")
         return False
 
+
 def watch_ads_for_account(account):
-    global stop_threads
-    headers = build_headers(account.get("authorization", ""))
+    """
+    Watches ads for a single account.
+    """
+    while not stop_event.is_set():
+        if claim_ad(account):
+            logger.info(f"{GREEN}✨ Success! Rewards claimed for {account['tg_id']}! +1000 Sparks added! 🎉{RESET}")
+            break
+        else:
+            logger.warning(f"Retrying for {account['tg_id']}... Hold on!")
+        time.sleep(5)
 
-    if not all(key in account for key in ['tg_id', 'tg_platform', 'language', 'chat_type', 'chat_instance', 'top_domain']):
-        logger.error("Missing required parameters in account.")
-        return
-
-    try:
-        while not stop_threads:
-            ad_claimed = claim_ad(account, headers)
-
-            if ad_claimed:
-                logger.info(f"{GREEN}✨ Ad Reward Claimed for account {account['tg_id']}, added +1000 Sparks!{RESET}")
-                break
-            else:
-                logger.error(f"Retrying for account {account['tg_id']}...")
-    except Exception as e:
-        logger.error(f"Error in account {account['tg_id']}: {e}")
 
 def wait_between_ads(wait_time):
-    global stop_threads
-    logger.info(f"⏳ Waiting {wait_time} seconds before the next round...")
-    while wait_time > 0 and not stop_threads:
-        minutes, seconds = divmod(wait_time, 60)
-        sys.stdout.write(f"\r⏳ Next round in: {minutes:02}:{seconds:02}  ")
+    """
+    Waits between ad-watching rounds.
+    """
+    logger.info(f"⏳ Let’s pause for {wait_time} seconds before the next round!")
+    for remaining in range(wait_time, 0, -1):
+        if stop_event.is_set():
+            break
+        minutes, seconds = divmod(remaining, 60)
+        sys.stdout.write(f"\r⏳ Time left: {minutes:02}:{seconds:02}  ")
         sys.stdout.flush()
         time.sleep(1)
-        wait_time -= 1
     print()
 
+
 def watch_ads():
-    global stop_threads
-    accounts = read_multiple_accounts("data.txt")
+    """
+    Main function to manage ad-watching for all accounts.
+    """
+    accounts = read_multiple_accounts(DATA_FILE)
     if not accounts:
         return
 
-    while not stop_threads:
-        logger.info("Starting a new ad-watching round for all accounts...")
-        threads = []
-        for account in accounts:
-            thread = threading.Thread(target=watch_ads_for_account, args=(account,))
-            threads.append(thread)
-            thread.start()
+    while not stop_event.is_set():
+        logger.info("🌟 Starting a new round of ad-watching. Sit back and relax!")
+        with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
+            for account in accounts:
+                executor.submit(watch_ads_for_account, account)
 
-        for thread in threads:
-            thread.join()
+        if not stop_event.is_set():
+            wait_between_ads(random.randint(*WAIT_TIME_RANGE))
 
-        logger.info("Completed ad-watching for all accounts in this round.")
-
-        if not stop_threads:
-            wait_time = random.randint(150, 180)
-            wait_between_ads(wait_time)
 
 def shutdown_handler(signum, frame):
-    global stop_threads
+    """
+    Gracefully shuts down the program on termination signals.
+    """
     print()
-    logger.info(f"{RED}Thank you for using me. Goodbye...{RESET}")
-    stop_threads = True
+    logger.info(f"{RED}Exiting... Wrapping things up. See you next time!{RESET}")
+    stop_event.set()
 
-signal.signal(signal.SIGINT, shutdown_handler)
 
-# Start the ad-watching process
-watch_ads()
+if __name__ == "__main__":
+    signal.signal(signal.SIGINT, shutdown_handler)
+    signal.signal(signal.SIGTERM, shutdown_handler)
+    os.system('cls' if os.name == 'nt' else 'clear')
+
+    watch_ads()
